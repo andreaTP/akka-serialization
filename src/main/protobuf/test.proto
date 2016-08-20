@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package eu.unicredit.test;
+
+option java_package = "eu.unicredit";
+option java_outer_classname = "Tests";
+
+message Test {
+    int64 timestamp = 1;
+    string msg = 2;
+    Type tp = 3;
+    double anum = 4;
+
+    enum Type {
+        ONE = 0;
+        TWO = 1;
+    }
+}
