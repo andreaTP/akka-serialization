@@ -9,7 +9,8 @@ lazy val macros = (project in file("macros")).settings(
   libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "org.reflections" % "reflections" % "0.9.10",
-    "com.trueaccord.scalapb" %% "scalapb-runtime" % "0.5.25"
+    "com.trueaccord.scalapb" %% "scalapb-runtime" % "0.5.25",
+    "com.lihaoyi" %% "upickle" % "0.4.1"
   )
 )
 
@@ -28,6 +29,10 @@ val testProject = Project(
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-remote" % akkaVersion,
       "com.typesafe.akka" %% "akka-multi-node-testkit" % akkaVersion,
+
+      //"com.lihaoyi" %% "upickle" % "0.4.1",
+      "me.chrons" %% "boopickle" % "1.2.4",
+
       "org.scalatest" %% "scalatest" % "2.2.1" % "test"),
     // make sure that MultiJvm test are compiled by the default test compilation
     Keys.compile in MultiJvm <<= (Keys.compile in MultiJvm) triggeredBy (Keys.compile in Test),
