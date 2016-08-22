@@ -1,10 +1,10 @@
 package unicredit
 
 import akka.serialization._
-import com.trueaccord.scalapb._
 import eu.unicredit.pickling.Picklables
+import upickle.default._
 
-class StaticBooPickleSerializer extends Serializer {
+class StaticUPickleSerializer extends Serializer {
 
   // This is whether "fromBinary" requires a "clazz" or not
   def includeManifest: Boolean = true
@@ -15,7 +15,7 @@ class StaticBooPickleSerializer extends Serializer {
 
   // "toBinary" serializes the given object to an Array of Bytes
   def toBinary(obj: AnyRef): Array[Byte] = {
-    companions(obj.getClass)._1(obj).getBytes
+    companions(obj.getClass)._1(obj)
   }
 
   // "fromBinary" deserializes the given array,
@@ -25,8 +25,7 @@ class StaticBooPickleSerializer extends Serializer {
     clazz: Option[Class[_]]): AnyRef = {
     clazz match {
       case Some(clz) =>
-        companions(clz)
-          ._2(new String(bytes))
+        companions(clz)._2(bytes)
           .asInstanceOf[AnyRef]
       case _ =>
         throw new Exception("no class in manifest")

@@ -43,7 +43,7 @@ object SampleMultiJvmNode2 extends Utils {
         def getActor1 = system.actorSelection("akka.tcp://system1@127.0.0.1:9991//user/actor1")
 
         context.system.scheduler.scheduleOnce(1 seconds){
-          getActor1 ! GenMessage.generate
+          getActor1 ! "one"
         }
         context.system.scheduler.scheduleOnce(2 seconds){
           getActor1 ! GenMessage.generate
