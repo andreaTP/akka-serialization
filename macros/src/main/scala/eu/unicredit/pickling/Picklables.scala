@@ -36,26 +36,22 @@ object Picklables {
 
 
     //filtering for debugging purposes...
+
+    //Let see how we can do that....
     val filtered = comps.filter(x =>
-      //(x.getName == "java.lang.String" ||
-      /*x.getName == "akka.remote.RemoteWatcher$HeartbeatTick$"*/
       (x.getName == "java.lang.String" ||
        x.getName.startsWith("unicredit") ||
-       x.getName == "eu.unicredit.test.Test")
-    ).filterNot(x => List(
-      "akka.remote.RemoteWatcher$HeartbeatTick$"
-    ).contains(x.getName) ||
-    x.getName.startsWith("scala.tools") ||
-    x.getName.startsWith("scala.reflect") ||
-    x.getName.startsWith("sbt") ||
-    x.getName.startsWith("javax")
+       x.getName == "eu.unicredit.test.Test"
+      )
     )
+
     println("comps are \n"+filtered.mkString("\n"))
 
     val bindings =
       filtered.map(x => {
         val name = x.getCanonicalName().split('.').toList.map(_.replace("$", ""))
         val typ = typeSelect(name)
+
 /*
         val term = termSelect(name)
 
@@ -84,11 +80,13 @@ object Picklables {
             (classOf[$typ],
               (
               ((a: Any) => {
+                import upickle._
                 import upickle.default._
                 println("upickle is writing!")
                 write(a.asInstanceOf[$typ]).getBytes
               }),
               ((a: Array[Byte]) => {
+                import upickle._
                 import upickle.default._
                 println("upickle is reading!")
                 read[$typ](new String(a))

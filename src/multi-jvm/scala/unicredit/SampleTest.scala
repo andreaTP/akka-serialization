@@ -19,7 +19,7 @@ object SampleMultiJvmNode1 extends Utils {
 
     system.actorOf(Props(new Actor{
       def receive = {
-        case any => println(s"RECEIVED $any")
+        case any => println(s"RECEIVED ${any.getClass}: $any ")
       }
     }), "actor1")
 
@@ -51,7 +51,7 @@ object SampleMultiJvmNode2 extends Utils {
       }
 
       def receive = {
-        case any => println(s"RECEIVED: $any")
+        case any => println(s"RECEIVED ${any.getClass}: $any ")
       }
     }))
 
