@@ -2,7 +2,7 @@ import com.typesafe.sbt.SbtMultiJvm
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 import com.trueaccord.scalapb.{ScalaPbPlugin => PB}
 
-val akkaVersion = "2.4-SNAPSHOT"
+val akkaVersion = "2.4.9"
 
 lazy val macros = (project in file("macros")).settings(
   scalaVersion := "2.11.8",

@@ -38,19 +38,48 @@ object Picklables {
     //filtering for debugging purposes...
 
     //Let see how we can do that....
-    val filtered = comps.filter(x =>
-      (x.getName == "java.lang.String" ||
+    val filtered = comps/*.filterNot( x =>
+      x.getName.startsWith("sbt") ||
+      x.getName.startsWith("scala.tools") ||
+      x.getName.startsWith("scala.reflect") ||
+      x.getName.startsWith("xsbt") ||
+      x.getName.startsWith("javax.swing") ||
+      x.getName.startsWith("org.omg") ||
+      x.getName.startsWith("scala.xml") ||
+      x.getName.startsWith("ch.epfl.lamp") ||
+      x.getName.startsWith("com.sun.org.apache.bcel") ||
+      x.getName.reverse.drop(1).contains("$")
+    )*/.filter(x =>
+      ((
+       x.getName == "java.lang.String" ||
        x.getName.startsWith("unicredit") ||
-       x.getName == "eu.unicredit.test.Test"
-      )
-    )
+       x.getName.startsWith("eu.unicredit")/* ||
+       x.getName.startsWith("akka") && !(
+       x.getName.reverse.drop(1).contains('$') ||
+       x.getName.startsWith("upickle.default") ||
+       x.getName.startsWith("akka.dispatch") ||
+       x.getName.startsWith("akka.remote") ||
+       {  //need a better accesibility thing
+         try {x.newInstance(); true} catch {case _ : Throwable => false}
+       }
+     )*/
+     )
+       //x.getName == "eu.unicredit.test.Test"
+     )
+   )//.take(10)
+
+   println("--> "+comps.filter(_.getName.startsWith("eu.unicredit")))
 
     println("comps are \n"+filtered.mkString("\n"))
+    //println("comps are \n"+filtered.size)
 
     val bindings =
       filtered.map(x => {
+        try {
+
         val name = x.getCanonicalName().split('.').toList.map(_.replace("$", ""))
         val typ = typeSelect(name)
+        val term = termSelect(name)
 
 /*
         val term = termSelect(name)
@@ -75,8 +104,10 @@ object Picklables {
         }
         else {
 */
-          try {
+
+            val str =
             q"""
+            Some(
             (classOf[$typ],
               (
               ((a: Any) => {
@@ -92,10 +123,23 @@ object Picklables {
                 read[$typ](new String(a))
               })
               )
+            )
             )"""
+
+            c.Expr[(((Any) => Array[Byte]),(Array[Byte] => Any))](
+              q"""
+              $term
+              $str
+              """
+            )
+
+            str
           } catch {
             case _ : Throwable =>
               println("error with "+x)
+              //throw new Exception("mine ;-)")
+              q"""None"""
+              /*
               q"""
               (classOf[$typ],
                 (
@@ -108,7 +152,7 @@ object Picklables {
                   null
                 })
                 )
-              )"""
+              )"""*/
           }
 
 //        }
@@ -117,7 +161,7 @@ object Picklables {
     //println("show -> "+show(q"Map(..$bindings)"))
 
     c.Expr[Map[Class[_], (((Any) => Array[Byte]),(Array[Byte] => Any))]](
-      q"Map(..$bindings)"
+      q"Seq(..$bindings).flatten.toMap"
     )
   }
 }
