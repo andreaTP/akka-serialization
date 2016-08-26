@@ -1,4 +1,4 @@
-package eu.unicredit.pickling
+package akka.remote
 
 import scala.reflect.api.Symbols
 import scala.language.experimental.macros
@@ -34,134 +34,115 @@ object Picklables {
       }
     }
 
-
     //filtering for debugging purposes...
 
+    //println("comps are "+comps.size)
+
     //Let see how we can do that....
-    val filtered = comps/*.filterNot( x =>
+    val filtered = comps.filterNot( x =>
       x.getName.startsWith("sbt") ||
       x.getName.startsWith("scala.tools") ||
       x.getName.startsWith("scala.reflect") ||
       x.getName.startsWith("xsbt") ||
       x.getName.startsWith("javax.swing") ||
+      x.getName.startsWith("java.swing") ||
+      x.getName.startsWith("java.awt") ||
+      x.getName.startsWith("java.applet") ||
+      x.getName.startsWith("sun.swing") ||
+      x.getName.startsWith("sun.awt") ||
+      x.getName.startsWith("sun.rmi") ||
       x.getName.startsWith("org.omg") ||
       x.getName.startsWith("scala.xml") ||
       x.getName.startsWith("ch.epfl.lamp") ||
-      x.getName.startsWith("com.sun.org.apache.bcel") ||
-      x.getName.reverse.drop(1).contains("$")
-    )*/.filter(x =>
-      ((
-       x.getName == "java.lang.String" ||
-       x.getName.startsWith("unicredit") ||
-       x.getName.startsWith("eu.unicredit")/* ||
-       x.getName.startsWith("akka") && !(
-       x.getName.reverse.drop(1).contains('$') ||
-       x.getName.startsWith("upickle.default") ||
-       x.getName.startsWith("akka.dispatch") ||
-       x.getName.startsWith("akka.remote") ||
-       {  //need a better accesibility thing
-         try {x.newInstance(); true} catch {case _ : Throwable => false}
-       }
+      x.getName.startsWith("com.sun.org") ||
+      x.getName.startsWith("upickle") ||
+      x.getName.startsWith("jdk") ||
+      x.getName.startsWith("javax.management") ||
+      x.getName.startsWith("javax.print") ||
+      x.getName.startsWith("org.jboss") ||
+      //here we become more serious... probably a loop...
+      (try {
+        x.getCanonicalName == "akka.remote.transport.AkkaProtocolTransport.AssociateUnderlyingRefuseUid$" ||
+        x.getCanonicalName == "akka.remote.transport.AkkaProtocolTransport.AssociateUnderlyingRefuseUid"
+      }
+      catch {case _ : Throwable => true})
+    )/*.filter(x =>
+        (x.getName == "java.lang.String" ||
+        x.getName.startsWith("akka.")
      )*/
-     )
-       //x.getName == "eu.unicredit.test.Test"
-     )
-   )//.take(10)
 
-   println("--> "+comps.filter(_.getName.startsWith("eu.unicredit")))
+    println("filtered are "+filtered.size)
 
-    println("comps are \n"+filtered.mkString("\n"))
-    //println("comps are \n"+filtered.size)
+    //if (filtered.size > 5000) System.exit(0)
+
+    var total = filtered.size
+
+    var ok = 0
+    var failures = 0
 
     val bindings =
-      filtered.map(x => {
+      filtered/*.par*/.map(x => {
         try {
 
         val name = x.getCanonicalName().split('.').toList.map(_.replace("$", ""))
         val typ = typeSelect(name)
-        val term = termSelect(name)
+        //val term = termSelect(name)
 
-/*
-        val term = termSelect(name)
 
-        if (x.getCanonicalName().endsWith("$")) {
+        println("checking "+x.getCanonicalName()+ " -> "+total)
+        val ast =
           q"""
           (classOf[$typ],
             (
             ((a: Any) => {
-              println("custom object serialization!")
-              write(${x.getCanonicalName()}).getBytes
+              import upickle._
+              import upickle.default._
+              println("upickle is writing!")
+              write(a.asInstanceOf[$typ]).getBytes
             }),
             ((a: Array[Byte]) => {
-              println("custom object deserialization!")
-              if (new String(a) == ${x.getCanonicalName()})
-                term
-              else
-                throw new Exception("cannot deserialize")
+              import upickle._
+              import upickle.default._
+              println("upickle is reading!")
+              read[$typ](new String(a))
             })
             )
           )"""
+
+          //Important Check!
+          c.typecheck(ast)
+
+          println("is picklable -> "+x)
+          ok += 1
+
+          total -= 1
+          Some(ast)
+        } catch {
+          case _ : Throwable =>
+            //print("error with "+x+" ")
+            failures += 1
+            total -= 1
+            println(" " +total+ " " + x)
+            None
         }
-        else {
-*/
+      }).filter(_.isDefined).map(_.get).toList
 
-            val str =
-            q"""
-            Some(
-            (classOf[$typ],
-              (
-              ((a: Any) => {
-                import upickle._
-                import upickle.default._
-                println("upickle is writing!")
-                write(a.asInstanceOf[$typ]).getBytes
-              }),
-              ((a: Array[Byte]) => {
-                import upickle._
-                import upickle.default._
-                println("upickle is reading!")
-                read[$typ](new String(a))
-              })
-              )
-            )
-            )"""
-
-            c.Expr[(((Any) => Array[Byte]),(Array[Byte] => Any))](
-              q"""
-              $term
-              $str
-              """
-            )
-
-            str
-          } catch {
-            case _ : Throwable =>
-              println("error with "+x)
-              //throw new Exception("mine ;-)")
-              q"""None"""
-              /*
-              q"""
-              (classOf[$typ],
-                (
-                ((a: Any) => {
-                  throw new Exception("not serializable")
-                  Array[Byte]()
-                }),
-                ((a: Array[Byte]) => {
-                  throw new Exception("not deserializable")
-                  null
-                })
-                )
-              )"""*/
-          }
-
-//        }
-      })
-
-    //println("show -> "+show(q"Map(..$bindings)"))
+      println("**************")
+      println("**************")
+      println("RESULTS:")
+      println("ok -> "+ok)
+      println("failures -> "+failures)
+      println("**************")
+      println("**************")
 
     c.Expr[Map[Class[_], (((Any) => Array[Byte]),(Array[Byte] => Any))]](
-      q"Seq(..$bindings).flatten.toMap"
+      try {
+        q"Seq(..$bindings).toMap"
+      } catch {
+        case err: Throwable =>
+          println("error in code generation")
+          q"Map()"
+      }
     )
   }
 }
