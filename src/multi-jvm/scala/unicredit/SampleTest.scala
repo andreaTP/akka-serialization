@@ -16,6 +16,10 @@ object SampleMultiJvmNode1 extends Utils {
   def main(args: Array[String]) {
 
     implicit val system = ActorSystem("system1")
+    //ARGGGHHHHH
+    akka.remote.StaticUPickleSerializer.system = system.asInstanceOf[ExtendedActorSystem]
+
+    println("QUI-> "+akka.serialization.JavaSerializer.currentSystem)
 
     system.actorOf(Props(new Actor{
       def receive = {
@@ -33,6 +37,8 @@ object SampleMultiJvmNode2 extends Utils {
   def main(args: Array[String]) {
 
     implicit val system = ActorSystem("system2")
+    //ARGGGHHHHH
+    akka.remote.StaticUPickleSerializer.system = system.asInstanceOf[ExtendedActorSystem]
 
     system.actorOf(Props(new Actor{
 

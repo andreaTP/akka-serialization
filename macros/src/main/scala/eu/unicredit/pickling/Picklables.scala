@@ -34,10 +34,6 @@ object Picklables {
       }
     }
 
-    //filtering for debugging purposes...
-
-    //println("comps are "+comps.size)
-
     //Let see how we can do that....
     val filtered = comps.filterNot( x =>
       x.getName.startsWith("sbt") ||
@@ -45,12 +41,17 @@ object Picklables {
       x.getName.startsWith("scala.reflect") ||
       x.getName.startsWith("xsbt") ||
       x.getName.startsWith("javax.swing") ||
+      x.getName.startsWith("javax.security") ||
+      x.getName.startsWith("javax.xml") ||
       x.getName.startsWith("java.swing") ||
       x.getName.startsWith("java.awt") ||
       x.getName.startsWith("java.applet") ||
       x.getName.startsWith("sun.swing") ||
       x.getName.startsWith("sun.awt") ||
       x.getName.startsWith("sun.rmi") ||
+      x.getName.startsWith("sun.security") ||
+      x.getName.startsWith("com.sun.corba") ||
+      x.getName.startsWith("com.sun.java.swing") ||
       x.getName.startsWith("org.omg") ||
       x.getName.startsWith("scala.xml") ||
       x.getName.startsWith("ch.epfl.lamp") ||
@@ -66,14 +67,7 @@ object Picklables {
         x.getCanonicalName == "akka.remote.transport.AkkaProtocolTransport.AssociateUnderlyingRefuseUid"
       }
       catch {case _ : Throwable => true})
-    )/*.filter(x =>
-        (x.getName == "java.lang.String" ||
-        x.getName.startsWith("akka.")
-     )*/
-
-    println("filtered are "+filtered.size)
-
-    //if (filtered.size > 5000) System.exit(0)
+    )
 
     var total = filtered.size
 
@@ -81,33 +75,50 @@ object Picklables {
     var failures = 0
 
     val bindings =
-      filtered/*.par*/.map(x => {
+      filtered/*.par -> produces horrific output and loop */.map(x => {
         try {
 
-        val name = x.getCanonicalName().split('.').toList.map(_.replace("$", ""))
-        val typ = typeSelect(name)
-        //val term = termSelect(name)
+          val name = x.getCanonicalName().split('.').toList.map(_.replace("$", ""))
+          val typ = typeSelect(name)
 
 
-        println("checking "+x.getCanonicalName()+ " -> "+total)
-        val ast =
-          q"""
-          (classOf[$typ],
-            (
-            ((a: Any) => {
-              import upickle._
-              import upickle.default._
-              println("upickle is writing!")
-              write(a.asInstanceOf[$typ]).getBytes
-            }),
-            ((a: Array[Byte]) => {
-              import upickle._
-              import upickle.default._
-              println("upickle is reading!")
-              read[$typ](new String(a))
-            })
-            )
-          )"""
+          println("checking "+x.getCanonicalName()+ " -> "+total)
+          val ast =
+            if (x.getCanonicalName().endsWith("$")) {
+              val term = termSelect(name)
+
+              q"""
+              ($term.getClass,
+                (
+                ((a: Any) => {
+                  import upickle._
+                  import upickle.default._
+                  write($term).getBytes
+                }),
+                ((a: Array[Byte]) => {
+                  import upickle._
+                  import upickle.default._
+                  $term
+                })
+                )
+              )"""
+            } else {
+                q"""
+                (classOf[$typ],
+                  (
+                  ((a: Any) => {
+                    import upickle._
+                    import upickle.default._
+                    write(a.asInstanceOf[$typ]).getBytes
+                  }),
+                  ((a: Array[Byte]) => {
+                    import upickle._
+                    import upickle.default._
+                    read[$typ](new String(a))
+                  })
+                  )
+                )"""
+            }
 
           //Important Check!
           c.typecheck(ast)

@@ -3,54 +3,82 @@ package akka.remote
 import akka.serialization._
 import upickle.default._
 
+object StaticUPickleSerializer {
+
+  var system: akka.actor.ExtendedActorSystem = _
+
+}
+
 class StaticUPickleSerializer extends Serializer {
 
-  // This is whether "fromBinary" requires a "clazz" or not
   def includeManifest: Boolean = true
 
   def identifier = 567890
 
-  val companions = Picklables.all
+  val companions = //Map[Class[_], (((Any) => Array[Byte]),(Array[Byte] => Any))]()
+    Picklables.all
 
-  val magicNumber: Byte = 5
+  //Special serializations
+  import upickle.Js
+  implicit val actorRefWriter = Writer[akka.actor.ActorRef]{
+    case ar =>
+      Js.Str(Serialization.serializedActorPath(ar))
+  }
+  implicit val actorRefReader = Reader[akka.actor.ActorRef]{
+    case Js.Str(str) =>
+      StaticUPickleSerializer.system.provider.resolveActorRef(str)
+  }
 
-  // "toBinary" serializes the given object to an Array of Bytes
+  implicit val terminatedWriter = Writer[akka.actor.Terminated]{
+    case ar =>
+      Js.Str(
+        Serialization.serializedActorPath(ar.actor)+" "+
+        ar.existenceConfirmed+" "+
+        ar.addressTerminated
+      )
+  }
+  implicit val terminatedReader = Reader[akka.actor.Terminated]{
+    case Js.Str(str) =>
+      val vals = str.split(" ")
+      new akka.actor.Terminated(
+        StaticUPickleSerializer.system.provider.resolveActorRef(vals(0)))(
+        java.lang.Boolean.valueOf(vals(1)),
+        java.lang.Boolean.valueOf(vals(2))
+      )
+  }
+
+  implicit val gotUidWriter = Writer[akka.remote.ReliableDeliverySupervisor.GotUid]{
+    case gu =>
+      Js.Str(
+        gu.uid+" "+write(gu.remoteAddres)
+      )
+  }
+  implicit val gotUidReader = Reader[akka.remote.ReliableDeliverySupervisor.GotUid]{
+    case Js.Str(str) =>
+      val vals = str.split(" ")
+      val uid = vals(0).toInt
+      val addr = str.replaceFirst(vals(0)+" ", "")
+
+      new akka.remote.ReliableDeliverySupervisor.GotUid(
+        uid, read[akka.actor.Address](addr)
+      )
+  }
+
   def toBinary(obj: AnyRef): Array[Byte] = {
     try {
       companions(obj.getClass)._1(obj)
     } catch {
       case err: Throwable =>
-        println("*************************")
-        println("cannot pickle "+obj.getClass)
-        println("*************************")
-        throw err
-/*
-        try {
-          obj.getClass match {
-            case classOf[akka.remote.EndpointWriter.AckIdleCheckTimer] =>
-              Array(magicNumber, 1.toByte)
-            case classOf[ akka.remote.ReliableDeliverySupervisor.GotUid] =>
-              Array(magicNumber, 3.toByte)
-              //println("next is the picklable counterpart...")
-              //final case class GotUid(uid: Int, remoteAddres: Address)
-            case classOf[akka.remote.RemoteWatcher.HeartbitTick] =>
-              Array(magicNumber, 3.toByte)
-            case classOf[akka.remote.RemoteWatcher.ReapUnreachableTick] =>
-              Array(magicNumber, 4.toByte)
-            case _ =>
-              throw new Exception("cannot serialize")
-          }
-          if (obj.getClass == classOf[akka.remote.EndpointWriter.AckIdleCheckTimer])
-            Array(magicNumber, 1.toByte)
-
-        } catch {
-            case ex: Throwable =>
-              println("missing")
-              throw err
-        }
-*/
-
-
+            println("*********************************")
+            println("*********************************")
+            println("          ERROR                  ")
+            println("*********************************")
+            println("*********************************")
+            println()
+            println("cannot serialize "+obj.getClass)
+            println("cannot serialize "+obj)
+            System.exit(0)
+            throw err
     }
 
   }
@@ -67,17 +95,16 @@ class StaticUPickleSerializer extends Serializer {
             .asInstanceOf[AnyRef]
         } catch {
           case err : Throwable =>
+            println("*********************************")
+            println("*********************************")
+            println("          ERROR                  ")
+            println("*********************************")
+            println("*********************************")
+            println()
+            println("SONO QUI!!!!"+clz.getCanonicalName)
+            println("cannot deserialize "+clz)
+            System.exit(0)
             throw err
-          /*
-            if (bytes(0) == magicNumber) {
-              bytes(1) match {
-                case 1 => akka.remote.EndpointWriter.AckIdleCheckTimer
-                case _ => throw new Exception("unknown encoding")
-              }
-            } else {
-              throw new Exception("unknown message")
-            }
-          */
         }
       case _ =>
         throw new Exception("no class in manifest")
