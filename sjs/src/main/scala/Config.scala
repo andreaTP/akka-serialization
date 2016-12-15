@@ -183,7 +183,7 @@ akka{
     }
     serializers {
       #this is a SHocon bug right now :-(
-      "StringLiteral(upickle)" = "akka.remote.StaticUPickleSerializer"
+      "upickle" = "akka.remote.StaticUPickleSerializer"
       #java = "akka.serialization.JavaSerializer"
       #bytes = "akka.serialization.ByteArraySerializer"
     }
@@ -192,11 +192,14 @@ akka{
       #"java.io.Serializable" = java
       "java.io.Serializable" = "upickle"
     }
+    enable-additional-serialization-bindings = off
     warn-about-java-serializer-usage = on
-    #serialization-identifiers {
-    #  "akka.serialization.JavaSerializer" = 1
-    #  "akka.serialization.ByteArraySerializer" = 4
-    #}
+    warn-on-no-serialization-verification = on
+    serialization-identifiers {
+      "akka.remote.StaticUPickleSerializer" = 1
+      #"akka.serialization.JavaSerializer" = 1
+      #"akka.serialization.ByteArraySerializer" = 4
+    }
     dsl {
       inbox-size = 1000
       default-timeout = 5s
@@ -207,6 +210,12 @@ akka{
     ticks-per-wheel = 512
     implementation = akka.actor.LightArrayRevolverScheduler
     shutdown-timeout = 5s
+  }
+
+  remote {
+    artery {
+      enabled = off
+    }
   }
 
 }

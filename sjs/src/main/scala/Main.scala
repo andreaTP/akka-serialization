@@ -29,17 +29,20 @@ object Main extends js.JSApp {
 
     */
 
-    //serialization()
+    serialization()
 
     //channelCommunication()
 
-    transport()
+    //transport()
   }
 
   def serialization() = {
+
+    val config = ConfigFactory.parseString(Config.serializationConfig)
+
     //this is due to the shocon bug...
     akka.actor.JSDynamicAccess.injectClass{
-      "StringLiteral(akka.remote.StaticUPickleSerializer)" -> classOf[akka.remote.StaticUPickleSerializer]
+      "akka.remote.StaticUPickleSerializer" -> classOf[akka.remote.StaticUPickleSerializer]
     }
     //This will be merged in akka.js
     akka.actor.JSDynamicAccess.injectClass{
@@ -58,7 +61,7 @@ object Main extends js.JSApp {
         }
       )
 
-    val system = ActorSystem("serializationTest", ConfigFactory.parseString(Config.serializationConfig))
+    val system = ActorSystem("serializationTest", config)
     import system.dispatcher
 
     val ponger = system.actorOf(ppActor(Test("ping",1), Test("pong",2)))
@@ -76,7 +79,7 @@ object Main extends js.JSApp {
     }
 
   }
-
+/*
   def transport() = {
     println("have to write a dummy transport first")
     //this is due to the shocon bug...
@@ -121,5 +124,6 @@ object Main extends js.JSApp {
     }
 
   }
+  */
 
 }

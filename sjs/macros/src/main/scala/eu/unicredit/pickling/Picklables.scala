@@ -87,7 +87,7 @@ object Picklables {
       filtered/*.par -> produces horrific output and loop */.map(x => {
         try {
 
-          val name = x.getCanonicalName().split('.').toList.map(_.replace("$", ""))
+          val name = x.getCanonicalName().replace("$", ".").split('.').toList
           val typ = typeSelect(name)
 
 
