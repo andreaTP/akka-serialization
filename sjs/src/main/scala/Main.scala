@@ -29,11 +29,11 @@ object Main extends js.JSApp {
 
     */
 
-    serialization()
+    //serialization()
 
     //channelCommunication()
 
-    //transport()
+    transport()
   }
 
   def serialization() = {
@@ -79,31 +79,31 @@ object Main extends js.JSApp {
     }
 
   }
-/*
+
   def transport() = {
     println("have to write a dummy transport first")
+
+    val config = ConfigFactory.parseString(Config.transportConfig)
+
     //this is due to the shocon bug...
     akka.actor.JSDynamicAccess.injectClass{
-      "StringLiteral(akka.remote.StaticUPickleSerializer)" -> classOf[akka.remote.StaticUPickleSerializer]
+      "akka.remote.StaticUPickleSerializer" -> classOf[akka.remote.StaticUPickleSerializer]
     }
     //This will be merged in akka.js
     akka.actor.JSDynamicAccess.injectClass{
       "java.io.Serializable" -> classOf[java.io.Serializable]
     }
+
     akka.actor.JSDynamicAccess.injectClass{
       "eu.unicredit.DummyTransport" -> classOf[eu.unicredit.DummyTransport]
     }
 
-    akka.actor.JSDynamicAccess.injectClass{
-      "akka.remote.RemoteActorRefProvider" -> classOf[akka.remote.RemoteActorRefProvider]
-    }
-
-    val system1 = ActorSystem("transportTest1", ConfigFactory.parseString(Config.transportConfig))
-    val system2 = ActorSystem("transportTest2", ConfigFactory.parseString(Config.transportConfig))
+    val system1 = ActorSystem("transportTest1", config)
+    //val system2 = ActorSystem("transportTest2", ConfigFactory.parseString(Config.transportConfig))
     import system1.dispatcher
 
     system1.scheduler.scheduleOnce(0 millis){
-      system2.scheduler.scheduleOnce(0 millis){
+    //  system2.scheduler.scheduleOnce(0 millis){
 
         println("Systems started..")
         /*system2.actorOf(Props(new Actor {
@@ -115,15 +115,14 @@ object Main extends js.JSApp {
 
         system1.actorSelection("akka.ws://transportTest2/pippo") ! "prova"
         */
-      }
+      //}
     }
 
     system1.scheduler.scheduleOnce(3 seconds){
       system1.terminate()
-      system2.terminate()
+      //system2.terminate()
     }
 
   }
-  */
 
 }

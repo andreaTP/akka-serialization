@@ -14,24 +14,24 @@ class DummyTransport (
   val settings: com.typesafe.config.Config,
   val system: ExtendedActorSystem) extends Transport {
 
-  println("transport started on system "+system)
+  val trail = "\n\n\n****\n"
+  println(trail+"transport started on system "+system)
 
   def associate(remoteAddress: Address): Future[AssociationHandle] = {
 
-    println("ask association with "+remoteAddress)
+    println(trail+"ask association with "+remoteAddress)
 
     ???
   }
 
   def isResponsibleFor(address: Address): Boolean = {
-    println("I'm responsible? "+address)
+    println(trail+"I'm responsible? "+address)
 
     false
   }
 
   def listen: Future[(Address, Promise[AssociationEventListener])] = {
-
-    println("have to listen?")
+    println(trail+"have to listen?")
 
     ???
   }
